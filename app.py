@@ -1,7 +1,8 @@
+import time
 import streamlit as st
 from google import genai
 
-# إعداد الصفحة وتنسيقها
+# إعداد الصفحة
 st.set_page_config(
     page_title="مساعد جمناي الذكي",
     page_icon="🤖",
@@ -18,7 +19,6 @@ if not api_key:
     st.error("⚠️ يرجى ضبط مفتاح GEMINI_API_KEY في إعدادات Secrets الخاصة بتطبيقك على Streamlit.")
 else:
     try:
-        # تهيئة عميل Gemini مباشرة
         client = genai.Client(api_key=api_key)
     except Exception as e:
         st.error(f"خطأ في تهيئة الاتصال: {e}")
@@ -28,36 +28,40 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # عرض الرسائل السابقة على واجهة البرنامج
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
     # استقبال السؤال أو الطلب من المستخدم
     if prompt := st.chat_input("اكتبي سؤالك أو استفسارك هنا..."):
-        # عرض رسالة المستخدم فوراً
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         if client:
-            try:
-                # استخدام الموديل المحدث والموصى به من جوجل
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=prompt
-                )
-                
-                response_text = response.text
+            response_text = None
+            # قائمة الموديلات المتاحة للتجربة بالترتيب لو واحد عليه ضغط
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            
+            with st.spinner("جاري الاتصال بـ Gemini... 🤖"):
+                for model_name in models_to_try:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=prompt
+                        )
+                        response_text = response.text
+                        break # لو نجح، اخرج من اللوب فوراً
+                    except Exception as e:
+                        # لو حصل خطأ ضغط، جرب الموديل اللي بعده أو انتظر ثانية
+                        continue
 
-                # عرض رد جمناي
+            if response_text:
                 with st.chat_message("assistant"):
                     st.markdown(response_text)
-                
-                # حفظ رد المساعد في الذاكرة
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
-
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال بـ Gemini: {e}")
+            else:
+                st.error("⚠️ السيرفر عليه ضغط حالياً (503). انتظري ثواني واكتبي سؤالك تاني وهيوصل فوراً!")
         else:
             st.error("العميل غير متصل، يرجى التأكد من مفتاح الـ API.")
+            
