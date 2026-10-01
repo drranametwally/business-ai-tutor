@@ -62,7 +62,7 @@ if prompt := st.chat_input(
       with st.spinner("جاري التفكير وتحليل السؤال..."):
         try:
           chat = client.chats.create(
-              model="gemini-3.8-flash",
+              model="gemini-1.5-flash",
               config=genai.types.GenerateContentConfig(
                   system_instruction=system_instruction, temperature=0.3
               ),
