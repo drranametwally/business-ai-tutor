@@ -1,83 +1,58 @@
-import os
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 
-# إعداد الصفحة
+# إعداد الصفحة وتنسيقها
 st.set_page_config(
-    page_title="المساعد الذكي لإدارة الأعمال والمحاسبة",
-    page_icon="📚",
+    page_title="مساعد جمناي الذكي",
+    page_icon="🤖",
     layout="centered"
 )
 
-# التحقق من مفتاح الـ API وتكوينه
-api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
+st.title("🤖 مساعد جمناي الذكي")
+st.write("اسألي في أي مجال (برمجة، علوم، أبحاث، تسويق، لغات...) وسيتم الرد بدقة واحترافية.")
+
+# جلب مفتاح الـ API من إعدادات Streamlit Secrets
+api_key = st.secrets.get("GEMINI_API_KEY")
 
 if not api_key:
-    st.error("⚠️ برجاء إضافة مفتاح الـ API تحت اسم GEMINI_API_KEY في إعدادات Streamlit Secrets.")
+    st.error("⚠️ يرجى ضبط مفتاح GEMINI_API_KEY في إعدادات Secrets الخاصة بتطبيقك على Streamlit.")
 else:
-    genai.configure(api_key=api_key)
+    # تهيئة عميل Gemini
+    client = genai.Client(api_key=api_key)
 
-# تخصيص واجهة المستخدم
-st.markdown("""
-    <h2 style='text-align: right; direction: rtl;'>📚 مساعدك الذكي لإدارة الأعمال والمحاسبة</h2>
-    <p style='text-align: right; direction: rtl; color: #555;'>
-    مرحباً بكِ! يمكنك طرح الأسئلة، أو <b>رفع صور المسائل المحاسبية، أو ملفات الـ PDF</b> ليقوم بتحليلها، تلخيصها، وشرحها بدقة، مع وضع أسئلة تدريبية.
-    </p>
-    <hr>
-""", unsafe_allow_html=True)
+    # تهيئة الذاكرة الخاصة بالمحادثة في Streamlit
+    if "chat_history" not in st.session_state:
+        # بنبدأ بجلسة دردشة حقيقية مع جمناي عشان يفتكر السياق
+        st.session_state.chat_history = client.chats.create(model="gemini-2.5-flash")
 
-# مكان مخصص لرفع الملفات أو الصور في الشريط الجانبي
-st.sidebar.header("📁 مرفقات الملفات والصور")
-uploaded_file = st.sidebar.file_uploader(
-    "ارفعي ملف PDF، مستند، أو صورة (مسألة/رسم بياني)", 
-    type=["pdf", "png", "jpg", "jpeg", "txt"]
-)
+    # حفظ الرسائل لعرضها على الشاشة
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# تهيئة الذاكرة المؤقتة للرسائل في الشات
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    # عرض الرسائل السابقة على واجهة البرنامج
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# عرض المحادثات السابقة
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # استقبال السؤال أو الطلب من المستخدم
+    if prompt := st.chat_input("اكتبي سؤالك أو استفسارك هنا..."):
+        # عرض رسالة المستخدم فوراً
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-# استقبال السؤال أو المدخلات من المستخدم
-prompt = st.chat_input("اطرحي سؤالاً، أو اطلبي تلخيص الملف المرفق، أو إنشاء أسئلة...")
-
-if prompt or uploaded_file:
-    user_content = prompt if prompt else "تم رفع ملف/صورة للتحليل والشرح."
-    if uploaded_file:
-        user_content += f" *(ملف مرفق: {uploaded_file.name})*"
-
-    st.session_state.messages.append({"role": "user", "content": user_content})
-    with st.chat_message("user"):
-        st.markdown(user_content)
-
-    try:
-        # استخدام الموديل الأحدث المدعوم حالياً لاستدعاء المحتوى وتحليل الملفات
-        model = genai.GenerativeModel("gemini-2.0-flash")
-
-        content_parts = []
-        if prompt:
-            content_parts.append(prompt)
-        else:
-            content_parts.append("قومي بتحليل هذا الملف أو الصورة، لخصيه، واشرحي أهم النقاط المحاسبية أو الإدارية فيه بوضوح باللغة العربية.")
-
-        if uploaded_file:
-            file_bytes = uploaded_file.getvalue()
-            mime_type = uploaded_file.type
-            content_parts.append({"mime_type": mime_type, "data": file_bytes})
-
-        with st.spinner("جاري تحليل الملف والتفكير في الإجابة... 🤖"):
-            response = model.generate_content(content_parts)
+        try:
+            # إرسال الرسالة لجلسة الدردشة النشطة لضمان دقة السياق والرد
+            response = st.session_state.chat_history.send_message(prompt)
             response_text = response.text
 
-        with st.chat_message("assistant"):
-            st.markdown(response_text)
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
+            # عرض رد جمناي
+            with st.chat_message("assistant"):
+                st.markdown(response_text)
+            
+            # حفظ رد المساعد في الذاكرة
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
 
-    except Exception as e:
-        error_msg = f"حدث خطأ أثناء معالجة الطلب: {e}"
-        st.error(error_msg)
-        
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء الاتصال بـ Gemini: {e}")
+            
