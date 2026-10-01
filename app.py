@@ -19,14 +19,14 @@ else:
 
 # تخصيص واجهة المستخدم
 st.markdown("""
-    <h2 style='text-align: right; direction: rtl;'>📚 مساعدك الذكي لتحليل وملخصات إدارة الأعمال والمحاسبة</h2>
+    <h2 style='text-align: right; direction: rtl;'>📚 مساعدك الذكي لإدارة الأعمال والمحاسبة</h2>
     <p style='text-align: right; direction: rtl; color: #555;'>
-    مرحباً بكِ! يمكنك هنا طرح الأسئلة، أو <b>رفع صور المسائل المحاسبية، أو ملفات الـ PDF</b> ليقوم بتحليلها، تلخيصها، وشرحها بدقة، مع وضع أسئلة تدريبية.
+    مرحباً بكِ! يمكنك طرح الأسئلة، أو <b>رفع صور المسائل المحاسبية، أو ملفات الـ PDF</b> ليقوم بتحليلها، تلخيصها، وشرحها بدقة، مع وضع أسئلة تدريبية.
     </p>
     <hr>
 """, unsafe_allow_html=True)
 
-# مكان مخصص لرفع الملفات أو الصور في الشريط الجانبي أو الواجهة
+# مكان مخصص لرفع الملفات أو الصور في الشريط الجانبي
 st.sidebar.header("📁 مرفقات الملفات والصور")
 uploaded_file = st.sidebar.file_uploader(
     "ارفعي ملف PDF، مستند، أو صورة (مسألة/رسم بياني)", 
@@ -46,7 +46,6 @@ for message in st.session_state.messages:
 prompt = st.chat_input("اطرحي سؤالاً، أو اطلبي تلخيص الملف المرفق، أو إنشاء أسئلة...")
 
 if prompt or uploaded_file:
-    # تجهيز محتوى الرسالة للعرض
     user_content = prompt if prompt else "تم رفع ملف/صورة للتحليل والشرح."
     if uploaded_file:
         user_content += f" *(ملف مرفق: {uploaded_file.name})*"
@@ -56,24 +55,16 @@ if prompt or uploaded_file:
         st.markdown(user_content)
 
     try:
-        # إعداد النموذج
-        generation_config = {
-            "temperature": 0.3,
-        }
-        
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            generation_config=generation_config,
-            system_instruction="أنت خبير محترف وأستاذ أكاديمي في المحاسبة، المالية، وتكنولوجيا الإدارة. مهمتك تحليل الملفات أو الصور المرفقة بدقة، تقديم ملخصات شاملة، شرح المفاهيم بوضوح باللغة العربية، وتوليد أسئلة اختبارية (Quiz) لتقييم الفهم عند الطلب."
-        )
+        # استخدام موديل gemini-1.5-flash المستقر والسريع جداً في تحليل النصوص والملفات
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
-        # تجهيز المدخلات للنموذج (سواء نص أو ملفات مرفقة)
+        # تجهيز المحتوى للنموذج (سواء نص أو ملفات مرفقة)
         content_parts = []
         
         if prompt:
             content_parts.append(prompt)
         else:
-            content_parts.append("قومي بتحليل هذا الملف أو الصورة، لخصيه، واشرحي أهم النقاط المحاسبية أو الإدارية فيه بوضوح.")
+            content_parts.append("قومي بتحليل هذا الملف أو الصورة، لخصيه، واشرحي أهم النقاط المحاسبية أو الإدارية فيه بوضوح باللغة العربية.")
 
         # معالجة الملف المرفق إذا وجد
         if uploaded_file:
