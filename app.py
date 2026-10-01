@@ -42,9 +42,9 @@ else:
 
         if client:
             try:
-                # استخدام الموديل المعتمد لإنشاء المحتوى مباشرة
+                # استخدام الموديل المحدث والموصى به من جوجل
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=prompt
                 )
                 
