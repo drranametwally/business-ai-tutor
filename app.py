@@ -13,7 +13,7 @@ st.set_page_config(
 api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
-    st.error("⚠️ برجاء إضافة مفتاح الـ API الخاص بـ Google Gemini في إعدادات Streamlit Secrets تحت اسم GEMINI_API_KEY.")
+    st.error("⚠️ برجاء إضافة مفتاح الـ API تحت اسم GEMINI_API_KEY في إعدادات Streamlit Secrets.")
 else:
     genai.configure(api_key=api_key)
 
@@ -55,18 +55,15 @@ if prompt or uploaded_file:
         st.markdown(user_content)
 
     try:
-        # استخدام موديل gemini-1.5-flash المستقر والسريع جداً في تحليل النصوص والملفات
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # استخدام الموديل الأحدث المدعوم حالياً لاستدعاء المحتوى وتحليل الملفات
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
-        # تجهيز المحتوى للنموذج (سواء نص أو ملفات مرفقة)
         content_parts = []
-        
         if prompt:
             content_parts.append(prompt)
         else:
             content_parts.append("قومي بتحليل هذا الملف أو الصورة، لخصيه، واشرحي أهم النقاط المحاسبية أو الإدارية فيه بوضوح باللغة العربية.")
 
-        # معالجة الملف المرفق إذا وجد
         if uploaded_file:
             file_bytes = uploaded_file.getvalue()
             mime_type = uploaded_file.type
@@ -76,7 +73,6 @@ if prompt or uploaded_file:
             response = model.generate_content(content_parts)
             response_text = response.text
 
-        # عرض رد المساعد وحفظه
         with st.chat_message("assistant"):
             st.markdown(response_text)
         st.session_state.messages.append({"role": "assistant", "content": response_text})
